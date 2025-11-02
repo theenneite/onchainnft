@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mint NFT Privé</title>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+</head>
+<body>
+  <h2>Mint ton NFT</h2>
+  <button onclick="mintNFT()">Mint pour 0.001 ETH</button>
+  <p id="status"></p>
+
+  <script>
+    const contractAddress = "0xc843B1f2826Df0408d3fF0A5eae890e320b53155";
+    const contractABI = [
+      {
+        "inputs": [],
+        "name": "mint",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      }
+    ];
+
+    async function mintNFT() {
+      try {
+        document.getElementById("status").innerText = "Connexion au wallet...";
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+        document.getElementById("status").innerText = "Envoi de la transaction...";
+        const tx = await contract.mint({ value: ethers.utils.parseEther("0.001") });
+        await tx.wait();
+
+        document.getElementById("status").innerText = "✅ NFT minté avec succès !";
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").innerText = "❌ Erreur : " + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
