@@ -5,8 +5,8 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-  <h2>Mint ton NFT</h2>
-  <button onclick="mintNFT()">Mint pour 0.001 ETH</button>
+  <h2>Private mint</h2>
+  <button onclick="mintNFT()">Mint for 0.001 ETH</button>
   <p id="status"></p>
 
   <script>
@@ -23,20 +23,20 @@
 
     async function mintNFT() {
       try {
-        document.getElementById("status").innerText = "Connexion au wallet...";
+        document.getElementById("status").innerText = "Wallet connecion...";
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
         const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-        document.getElementById("status").innerText = "Envoi de la transaction...";
+        document.getElementById("status").innerText = "Sending transation...";
         const tx = await contract.mint({ value: ethers.utils.parseEther("0.001") });
         await tx.wait();
 
-        document.getElementById("status").innerText = "✅ NFT minté avec succès !";
+        document.getElementById("status").innerText = "✅ NFT minted !";
       } catch (error) {
         console.error(error);
-        document.getElementById("status").innerText = "❌ Erreur : " + error.message;
+        document.getElementById("status").innerText = "❌ Error : " + error.message;
       }
     }
   </script>
