@@ -15,7 +15,7 @@
     const contractAddress = "0xCFE932D171AEAE30d70a468410604Bb4ae2B9c2B";
 
     // ABI
-    [
+   [
 	{
 		"inputs": [
 			{
@@ -965,16 +965,6 @@
 		"type": "function"
 	}
 ]
-    //
-    const contractABI = [
-      {
-        "inputs":[{"internalType":"uint256","name":"quantity","type":"uint256"}],
-        "name":"mint",
-        "outputs":[],
-        "stateMutability":"payable",
-        "type":"function"
-      }
-    ];
 
     let provider;
     let signer;
@@ -1000,8 +990,7 @@
           return;
         }
 
-        // mint price
-        
+        // price
         const mintPrice = "0"; 
 
         const totalCost = ethers.utils.parseEther((mintPrice * quantity).toString());
