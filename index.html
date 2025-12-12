@@ -30,7 +30,7 @@
         const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
         document.getElementById("status").innerText = "Sending transation...";
-        const tx = await contract.mint({ value: ethers.utils.parseEther("0.001") });
+        const tx = await contract.mint({ value: ethers.utils.parseEther("0") });
         await tx.wait();
 
         document.getElementById("status").innerText = "✅ NFT minted !";
