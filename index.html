@@ -1,24 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+  <meta charset="UTF-8">
   <title>Mint NFT</title>
 </head>
 <body>
   <h1>Mint NFT</h1>
+
+  <!-- Bouton connexion -->
   <button id="connectButton">Connecter MetaMask</button>
   <br><br>
+
+  <!-- Champ quantité -->
   <input type="number" id="quantity" placeholder="Combien de NFTs ?" min="1">
   <button id="mintButton">Mint</button>
 
+  <!-- Librairie ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
 
-
-	
   <script>
-    const contractAddress = "0xCFE932D171AEAE30d70a468410604Bb4ae2B9c2B";
+    const connectButton = document.getElementById('connectButton');
+    const mintButton = document.getElementById('mintButton');
 
-    // ABI
-	const contractABI =   [
+    // Connexion à MetaMask
+    connectButton.addEventListener('click', async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          console.log("Comptes connectés :", accounts);
+          alert("Connecté avec : " + accounts[0]);
+        } catch (error) {
+          console.error("Erreur de connexion :", error);
+        }
+      } else {
+        alert("MetaMask n'est pas installé !");
+      }
+    });
+
+    // Mint NFT (à adapter selon ton contrat)
+    mintButton.addEventListener('click', async () => {
+      if (window.ethereum) {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+
+        // Remplace par l'adresse et l'ABI de ton contrat
+        const contractAddress = "0xCFE932D171AEAE30d70a468410604Bb4ae2B9c2B";
+        const contractABI = [ [
 	{
 		"inputs": [
 			{
@@ -967,48 +994,24 @@
 		"stateMutability": "view",
 		"type": "function"
 	}
-]
+] ];
 
-    let provider;
-    let signer;
-    let contract;
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-    async function connectWallet() {
-      if (window.ethereum) {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        contract = new ethers.Contract(contractAddress, contractABI, signer);
-        alert("Wallet connecté !");
-      } else {
-        alert("Installe MetaMask !");
-      }
-    }
+        const quantity = document.getElementById('quantity').value;
 
-    async function mintNFT() {
-      try {
-        const quantity = document.getElementById("quantity").value;
-        if (quantity <= 0) {
-          alert("Choisis une quantité > 0");
-          return;
+        try {
+          const tx = await contract.mint(quantity); // méthode à adapter
+          console.log("Transaction envoyée :", tx.hash);
+          alert("Transaction envoyée : " + tx.hash);
+        } catch (error) {
+          console.error("Erreur lors du mint :", error);
+          alert("Erreur lors du mint : " + error.message);
         }
-
-        // price
-        const mintPrice = "0"; 
-
-        const totalCost = ethers.utils.parseEther((mintPrice * quantity).toString());
-
-        const tx = await contract.mint(quantity, { value: totalCost });
-        await tx.wait();
-        alert("NFT minté avec succès !");
-      } catch (err) {
-        console.error(err);
-        alert("Erreur lors du mint");
+      } else {
+        alert("MetaMask n'est pas installé !");
       }
-    }
-
-    document.getElementById("connectButton").onclick = connectWallet;
-    document.getElementById("mintButton").onclick = mintNFT;
+    });
   </script>
 </body>
 </html>
