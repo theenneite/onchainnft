@@ -6,11 +6,11 @@
 </head>
 <body>
   <h2>Private mint</h2>
-  <button onclick="mintNFT()">Mint for 0.001 ETH</button>
+  <button onclick="mintNFT()">Mint for 0 ETH</button>
   <p id="status"></p>
 
   <script>
-    const contractAddress = "0x1f75B38906dE12cA527267b51DbE7D7616eCA0E3";
+    const contractAddress = "0xCFE932D171AEAE30d70a468410604Bb4ae2B9c2B";
     const contractABI = [
       {
         "inputs": [],
@@ -21,7 +21,7 @@
       }
     ];
 
-    async function mintNFT() {
+    async function mint() {
       try {
         document.getElementById("status").innerText = "Wallet connecion...";
         const provider = new ethers.providers.Web3Provider(window.ethereum);
