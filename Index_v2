@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mint gratuit – Base</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; }
+    .card { max-width: 720px; margin: 0 auto; border: 1px solid #ddd; padding: 24px; border-radius: 12px; }
+    h1 { margin-top: 0; }
+    button { padding: 10px 16px; border-radius: 8px; border: 1px solid #444; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+    .status { margin-top: 12px; font-size: 14px; }
+    .ok { color: #0a7; }
+    .warn { color: #b85; }
+    .err { color: #d33; }
+    input, select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; min-width: 160px; }
+    .foot { margin-top: 20px; font-size: 12px; opacity: 0.8; }
+    code { background: rgba(127,127,127,0.15); padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Mint gratuit sur Base</h1>
+    <p>
+      Connecte ton wallet, assure-toi d’être sur le réseau <strong>Base</strong>, puis clique sur <em>Mint</em>.
+      Les frais de gaz restent nécessaires, mais le mint n’a pas de prix (fonction sans valeur envoyée).
+    </p>
+
+    <div class="row">
+      <button id="connectBtn">Connecter un wallet</button>
+      <button id="switchBtn">Basculer vers Base</button>
+      <button id="mintBtn" disabled>Mint</button>
+    </div>
+
+    <div class="row">
+      <label>
+        Contrat:
+        <input id="contractAddress" type="text" placeholder="0x..." value="PASTE_CONTRACT_ADDRESS_HERE" />
+      </label>
+      <label>
+        Réseau:
+        <select id="network">
+          <option value="8453">Base mainnet (8453)</option>
+          <option value="84532">Base Sepolia (84532)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="status" id="status">Statut: non connecté.</div>
+
+    <div class="foot">
+      Astuce: remplacez <code>PASTE_CONTRACT_ADDRESS_HERE</code> et le <code>ABI</code> ci-dessous par ceux de votre contrat.
+    </div>
+  </div>
+
+  <!-- Ethers v5 depuis CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" integrity="sha384-8t6R9P4wYw20bXQ3l8mVv9bVdYfKk8QxJwPq6p0p8s2Vjg9A9HcYV3R0H9VQYJmR" crossorigin="anonymous"></script>
+
+  <script>
+    // 1) REMPLACEZ par l’ABI de votre contrat (au minimum la fonction de mint)
+    // Exemple pour un ERC-721 avec une fonction "mint()" gratuite:
+    const CONTRACT_ABI = [
+      // Si votre fonction s'appelle différemment (ex: "safeMint(address)"), remplacez-ci dessous.
+      "function mint() external",
+      // Optionnel: événements pour feedback
+      "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+    ];
+
+    // 2) Réglages par défaut
+    const DEFAULT_CHAIN = 8453; // Base mainnet. Utilisez 84532 pour Base Sepolia.
+    const CHAIN_PARAMS = {
+      8453: {
+        chainId: "0x2105",
+        chainName: "Base",
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        rpcUrls: ["https://mainnet.base.org"],
+        blockExplorerUrls: ["https://basescan.org"]
+      },
+      84532: {
+        chainId: "0x14A30",
+        chainName: "Base Sepolia",
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        rpcUrls: ["https://sepolia.base.org"],
+        blockExplorerUrls: ["https://sepolia.basescan.org"]
+      }
+    };
+
+    const statusEl = document.getElementById("status");
+    const connectBtn = document.getElementById("connectBtn");
+    const switchBtn = document.getElementById("switchBtn");
+    const mintBtn = document.getElementById("mintBtn");
+    const networkSel = document.getElementById("network");
+    const addressInput = document.getElementById("contractAddress");
+
+    let provider, signer, userAddress;
+
+    function setStatus(text, cls = "") {
+      statusEl.textContent = "Statut: " + text;
+      statusEl.className = "status " + cls;
+    }
+
+    async function getProvider() {
+      if (!window.ethereum) {
+        setStatus("Aucun wallet détecté. Installez MetaMask ou un wallet compatible.", "err");
+        throw new Error("No wallet");
+      }
+      provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      return provider;
+    }
+
+    async function connect() {
+      try {
+        await getProvider();
+        const accounts = await provider.send("eth_requestAccounts", []);
+        userAddress = ethers.utils.getAddress(accounts[0]);
+        signer = provider.getSigner();
+        const net = await provider.getNetwork();
+        setStatus(`Connecté: ${userAddress} | Réseau chainId: ${net.chainId}`, "ok");
+        mintBtn.disabled = false;
+      } catch (e) {
+        setStatus("Connexion refusée ou impossible: " + e.message, "err");
+      }
+    }
+
+    async function ensureChain(targetChainId) {
+      await getProvider();
+      const hexId = CHAIN_PARAMS[targetChainId].chainId;
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: hexId }]
+        });
+        const net = await provider.getNetwork();
+        setStatus(`Réseau actif: ${net.name} (${net.chainId})`, "ok");
+      } catch (switchErr) {
+        // Si la chaîne n’est pas ajoutée, on propose l’ajout
+        if (switchErr.code === 4902 || (switchErr.data && switchErr.data.originalError && switchErr.data.originalError.code === 4902)) {
+          try {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [CHAIN_PARAMS[targetChainId]]
+            });
+            const net = await provider.getNetwork();
+            setStatus(`Chaîne ajoutée et activée: ${net.name} (${net.chainId})`, "ok");
+          } catch (addErr) {
+            setStatus("Ajout de la chaîne refusé: " + addErr.message, "err");
+          }
+        } else {
+          setStatus("Changement de réseau refusé: " + switchErr.message, "err");
+        }
+      }
+    }
+
+    async function mint() {
+      try {
+        await getProvider();
+        const targetChainId = parseInt(networkSel.value, 10);
+        const net = await provider.getNetwork();
+        if (net.chainId !== targetChainId) {
+          setStatus(`Mauvais réseau (${net.chainId}). Basculer vers ${targetChainId} puis retenter.`, "warn");
+          return;
+        }
+        if (!signer) signer = provider.getSigner();
+        const contractAddress = addressInput.value.trim();
+        if (!ethers.utils.isAddress(contractAddress)) {
+          setStatus("Adresse de contrat invalide.", "err");
+          return;
+        }
+
+        const contract = new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
+
+        // Appel de la fonction de mint gratuite (sans value)
+        setStatus("Transaction en cours de signature...", "warn");
+        const tx = await contract.mint(); // Si votre fonction exige des params, adaptez ici.
+        setStatus(`Envoyée: ${tx.hash}. En attente de confirmation...`, "warn");
+
+        const receipt = await tx.wait(); // attend 1+ confirmations
+        const explorer = CHAIN_PARAMS[targetChainId].blockExplorerUrls[0];
+        setStatus(`Confirmée dans le bloc ${receipt.blockNumber}. Voir: ${explorer}/tx/${tx.hash}`, "ok");
+      } catch (e) {
+        // Messages d’erreur plus lisibles
+        let msg = e && e.message ? e.message : String(e);
+        if (msg.includes("user rejected")) msg = "Signature refusée par l’utilisateur.";
+        setStatus("Erreur de mint: " + msg, "err");
+      }
+    }
+
+    // Écoute des changements
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", (accounts) => {
+        if (accounts && accounts.length) {
+          userAddress = ethers.utils.getAddress(accounts[0]);
+          setStatus("Compte changé: " + userAddress, "warn");
+        } else {
+          userAddress = null;
+          signer = null;
+          setStatus("Déconnecté.", "warn");
+        }
+      });
+      window.ethereum.on("chainChanged", (_chainId) => {
+        // force la mise à jour de provider/signer
+        provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+        signer = provider.getSigner();
+        setStatus("Réseau changé: " + parseInt(_chainId, 16), "warn");
+      });
+    }
+
+    // Boutons
+    connectBtn.addEventListener("click", connect);
+    switchBtn.addEventListener("click", () => ensureChain(parseInt(networkSel.value, 10)));
+    mintBtn.addEventListener("click", mint);
+
+    // Par défaut, sélectionner Base mainnet
+    networkSel.value = String(DEFAULT_CHAIN);
+  </script>
+</body>
+</html>
